@@ -1,0 +1,7 @@
+name,dept,lunchTime,salary,hireDate,age,isSenior,seniorityStartTime
+John,Eng,12:00:00,1000,3/19/2005,35,TRUE,12/2/2007 15:56:00
+Dave,Eng,12:00:00,500,4/19/2006,27,FALSE,null
+Sally,Eng,13:00:00,600,10/10/2005,30,FALSE,null
+Ben,Sales,12:00:00,400,10/10/2002,32,TRUE,3/9/2005 12:30:00
+Dana,Sales,12:00:00,350,9/8/2004,25,FALSE,null
+Mike,Marketing,13:00:00,800,1/10/2005,24,TRUE,12/30/2007 14:40:00

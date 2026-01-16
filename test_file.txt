@@ -1,0 +1,2 @@
+This is a test file to check workspace synchronization.
+นี่คือไฟล์ทดสอบเพื่อตรวจสอบการซิงค์ข้อมูลของพื้นที่ทำงาน

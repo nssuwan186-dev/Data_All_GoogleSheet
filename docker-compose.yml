@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_hotel_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'hotel_db'
+      MYSQL_USER: 'importer'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'supersecretpassword' # You can change this
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./.db_data:/var/lib/mysql
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n_workflow_automation
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - DB_TYPE=mysql
+      - DB_MYSQL_HOST=db
+      - DB_MYSQL_USER=importer
+      - DB_MYSQL_PASSWORD=password
+      - DB_MYSQL_DB=hotel_db
+    volumes:
+      - ./.n8n_data:/home/node/.n8n
+    depends_on:
+      - db

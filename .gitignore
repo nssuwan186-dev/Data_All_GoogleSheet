@@ -1,0 +1,8 @@
+.gemini/
+gha-creds-*.json
+
+# Database
+.db_data/
+
+# Virtual Environments
+.n8n_venv/

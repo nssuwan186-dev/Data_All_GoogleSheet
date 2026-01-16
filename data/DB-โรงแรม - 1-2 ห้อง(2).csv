@@ -1,0 +1,52 @@
+ห้อง,ตึก,ชั้น,ประเภทห้อง,ค่าห้องต่อคืน
+A101,A,1,Standard,400
+A102,A,1,Standard,400
+A103,A,1,Standard,400
+A104,A,1,Standard,400
+A105,A,1,Standard,400
+A106,A,1,Standard Twin,500
+A107,A,1,Standard Twin,500
+A108,A,1,Standard Twin,500
+A109,A,1,Standard Twin,500
+A110,A,1,Standard Twin,500
+A111,A,1,Standard,400
+A201,A,2,Standard,400
+A202,A,2,Standard,400
+A203,A,2,Standard,400
+A204,A,2,Standard,รายเดือน
+A205,A,2,Standard,รายเดือน
+A206,A,2,Standard,รายเดือน
+A207,A,2,Standard,400
+A208,A,2,Standard,รายเดือน
+A209,A,2,Standard,400
+A210,A,2,Standard,400
+A211,A,2,Standard,400
+B101,B,1,Standard,400
+B102,B,1,Standard,400
+B103,B,1,Standard,400
+B104,B,1,Standard,400
+B105,B,1,Standard,400
+B106,B,1,Standard,400
+B107,B,1,Standard,400
+B108,B,1,Standard,400
+B109,B,1,Standard,400
+B110,B,1,Standard,400
+B111,B,1,Standard Twin,500
+B201,B,2,Standard,400
+B202,B,2,Standard,400
+B203,B,2,Standard,400
+B204,B,2,Standard,400
+B205,B,2,Standard,400
+B206,B,2,Standard,400
+B207,B,2,Standard,400
+B208,B,2,Standard,400
+B209,B,2,Standard,400
+B210,B,2,Standard,400
+B211,B,2,Standard,400
+N1,N,1,Standard Twin,600
+N2,N,1,Standard,500
+N3,N,1,Standard,500
+N4,N,1,Standard Twin,600
+N5,N,1,Standard Twin,600
+N6,N,1,Standard Twin,600
+N7,N,1,Standard,500

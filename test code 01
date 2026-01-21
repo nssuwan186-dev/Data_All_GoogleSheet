@@ -1,0 +1,553 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  LayoutDashboard, 
+  BedDouble, 
+  Users, 
+  FileText, 
+  Database, 
+  Settings, 
+  Plus, 
+  Download, 
+  Upload,
+  Menu,
+  X,
+  TrendingUp,
+  DollarSign,
+  Calendar as CalendarIcon,
+  Zap,
+  BookOpen,
+  Landmark,
+  Briefcase,
+  PlusCircle,
+  Save,
+  ArrowRight,
+  FileUp,
+  Trash2,
+  Activity,
+  ShieldCheck,
+  Droplet
+} from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  AreaChart,
+  Area
+} from 'recharts';
+
+// --- Colors & Types ---
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+// --- Data Structures based on your CSV Analysis ---
+interface Room { id: string; number: string; type: string; status: string; price: number; }
+interface Booking { id: string; bookingNo: string; roomId: string; customerName: string; checkIn: string; totalPrice: number; status: string; }
+interface AccountRecord { id: string; date: string; item: string; in: number; out: number; type: 'income' | 'expense'; remark: string; }
+interface PayrollRecord { id: string; period: string; employeeName: string; position: string; totalIncome: number; deduction: number; netPay: number; accountNo: string; }
+interface MeterRecord { room: string; month: string; prevUnit: number; currUnit: number; totalUnit: number; totalCost: number; }
+interface ImmigrationReport { id: string; room: string; customerName: string; checkIn: string; nationality: string; }
+
+// --- Helper: Advanced CSV Parser (Handle varied headers) ---
+const parseCSV = (text: string) => {
+  const lines = text.split('\n').filter(line => line.trim() !== '');
+  if (lines.length < 2) return [];
+  
+  // Header Hunting: หาบรรทัดที่เป็นหัวตารางจริงๆ โดยดูจาก Keyword ในไฟล์ของคุณ
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(20, lines.length); i++) {
+    const line = lines[i];
+    if (line.includes('ลำดับ') || line.includes('วันที่') || line.includes('ห้อง') || line.includes('Booking') || line.includes('รายชื่อ') || line.includes('มิเตอร์ครั้งก่อน')) {
+      headerIndex = i; break;
+    }
+  }
+  
+  const headers = lines[headerIndex].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(headerIndex + 1).map(line => {
+    // Regex จัดการ comma ใน quote (เช่น "1,000")
+    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
+    const obj: any = {};
+    headers.forEach((header, index) => {
+      let val = values[index] ? values[index].trim() : '';
+      val = val.replace(/^"|"$/g, '');
+      obj[header] = val;
+    });
+    return obj;
+  });
+};
+
+export default function HotelBloodSystem() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showQuickAction, setShowQuickAction] = useState<string | null>(null);
+
+  // --- Auto-Collapse Logic ---
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setIsSidebarOpen(true);
+      else setIsSidebarOpen(false);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // --- 5 Core Systems Data States ---
+  // 1. Arteries (Front Office)
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  // 2. Veins (Accounting)
+  const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+  // 3. Nourishment (HR/Payroll)
+  const [payrolls, setPayrolls] = useState<PayrollRecord[]>([]);
+  // 4. Temperature (Utilities)
+  const [meters, setMeters] = useState<MeterRecord[]>([]);
+  // 5. Immune (Compliance)
+  const [reports, setReports] = useState<ImmigrationReport[]>([]);
+
+  // --- Form States for Quick Actions ---
+  const [newBooking, setNewBooking] = useState({ name: '', room: '', price: '', date: new Date().toISOString().split('T')[0] });
+  const [newAccount, setNewAccount] = useState({ item: '', amount: '', type: 'in', remark: '' });
+
+  // --- Handlers ---
+  const handleAddBooking = () => {
+    if(!newBooking.name || !newBooking.room) return;
+    const booking: Booking = {
+      id: `bk-new-${Date.now()}`,
+      bookingNo: `VP${Math.floor(Math.random()*10000)}`,
+      roomId: newBooking.room,
+      customerName: newBooking.name,
+      checkIn: newBooking.date,
+      totalPrice: parseFloat(newBooking.price) || 0,
+      status: 'Check-in'
+    };
+    setBookings([booking, ...bookings]);
+    
+    // Auto-add to Immigartion Report (Immune System)
+    const report: ImmigrationReport = {
+        id: `tm-${Date.now()}`,
+        room: newBooking.room,
+        customerName: newBooking.name,
+        checkIn: newBooking.date,
+        nationality: 'ไทย'
+    };
+    setReports([report, ...reports]);
+
+    setNewBooking({ name: '', room: '', price: '', date: new Date().toISOString().split('T')[0] });
+    setShowQuickAction(null);
+  };
+
+  const handleAddAccount = () => {
+    if(!newAccount.item || !newAccount.amount) return;
+    const amount = parseFloat(newAccount.amount);
+    const record: AccountRecord = {
+      id: `ac-new-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      item: newAccount.item,
+      in: newAccount.type === 'in' ? amount : 0,
+      out: newAccount.type === 'out' ? amount : 0,
+      type: newAccount.type === 'in' ? 'income' : 'expense',
+      remark: newAccount.remark
+    };
+    setAccounts([record, ...accounts]);
+    setNewAccount({ item: '', amount: '', type: 'in', remark: '' });
+    setShowQuickAction(null);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const data = parseCSV(text);
+        
+        // Mapping Logic based on your specific CSV structure
+        if (type === 'rooms') {
+            setRooms(p => [...p, ...data.map((item: any, i) => ({ 
+                id: `r-${i}`, number: item['ห้อง']||'N/A', type: item['ประเภทห้อง']||'Std', status: item['สถานะ']||'Avail', price: parseFloat(item['ค่าห้องต่อคืน']||'0') 
+            })).filter(r=>r.number!=='N/A')]);
+        }
+        else if (type === 'bookings') {
+            setBookings(p => [...p, ...data.map((item: any, i) => ({ 
+                id: item['Booking No.']||`b-${i}`, bookingNo: item['Booking No.']||'-', roomId: item['เบอร์ห้อง']||'', customerName: item['ชื่อลูกค้า']||'', checkIn: item['Check In']||'', totalPrice: parseFloat((item['ยอดรวมสุทธิ']||'0').replace(/,/g, '')), status: item['สถานะ']||'Active' 
+            })).filter(b=>b.bookingNo!=='-')]);
+        }
+        else if (type === 'accounts') {
+            setAccounts(p => [...p, ...data.map((item: any, i) => {
+                const inc = parseFloat((item['รับ']||item['รับ (เข้า)']||'0').replace(/,/g, ''));
+                const exp = parseFloat((item['จ่าย']||item['จ่าย (ออก)']||'0').replace(/,/g, ''));
+                return { 
+                    id: `ac-${i}`, date: item['วันที่']||'', item: item['ชื่อรายการ']||item['รายการ/ชื่อลูกค้า']||'', in: inc, out: exp, type: inc > 0 ? 'income' : 'expense', remark: item['หมายเหตุ']||'' 
+                };
+            })]);
+        }
+        else if (type === 'meters') {
+            setMeters(p => [...p, ...data.map((item: any) => ({ 
+                room: item['ห้อง']||item['ชื่อ-สกุล']?.split(',')?.[2]||'Unk', month: item['ประจำเดือน']||'', 
+                prevUnit: parseFloat(item['มิเตอร์ครั้งก่อน']||'0'), currUnit: parseFloat(item['มิเตอร์ครั้งใหม่']||'0'),
+                totalUnit: parseFloat(item['รวมหน่วย']||'0'), totalCost: parseFloat((item['รวม']||'0').replace(/,/g, '')) 
+            })).filter((m: any)=>m.totalCost>0)]);
+        }
+        else if (type === 'payrolls') {
+             // Extract period from filename e.g., "1-15 ม.ค. 68"
+             let periodName = file.name.replace('.csv','').replace('สรุปจ่ายเงินเดือน 2569.xlsx - ','').trim();
+             setPayrolls(p => [...p, ...data.filter((d: any)=>d['รายชื่อ']&&d['ยอดจ่ายจริง']).map((item: any, i) => ({ 
+                 id: `p-${Date.now()}-${i}`, period: periodName, employeeName: item['รายชื่อ'], position: item['ตำแหน่ง'], 
+                 totalIncome: parseFloat((item['รวมเงิน']||'0').replace(/,/g, '')), 
+                 deduction: parseFloat((item['หักประกันสังคม']||'0').replace(/,/g, '')) + parseFloat((item['หักขาดงาน']||'0').replace(/,/g, '')),
+                 netPay: parseFloat((item['ยอดจ่ายจริง']||'0').replace(/,/g, '')), accountNo: item['เลขที่บัญชี']||'-' 
+             }))]);
+        }
+        else if (type === 'reports') {
+             setReports(p => [...p, ...data.map((item: any, i) => ({
+                 id: `tm-${i}`, checkIn: item['วันเวลา เข้ามาพัก']||'', room: item['ห้องพักเลขที่']||'', customerName: item['ชื่อตัวและชื่อสกุล']||'', nationality: item['สัญชาติ']||'ไทย'
+             }))]);
+        }
+      };
+      reader.readAsText(file);
+    });
+  };
+
+  const generateSQL = () => {
+    let sql = `-- Hotel Blood System SQL Export ${new Date().toISOString()}\n`;
+    sql += `-- 1. Front Office\nINSERT INTO bookings (no, room, customer, total) VALUES \n` + bookings.map(b=>`('${b.bookingNo}','${b.roomId}','${b.customerName}',${b.totalPrice})`).join(',\n') + ';\n\n';
+    sql += `-- 2. Accounting\nINSERT INTO transactions (date, item, in, out) VALUES \n` + accounts.map(a=>`('${a.date}','${a.item}',${a.in},${a.out})`).join(',\n') + ';\n\n';
+    sql += `-- 3. Payroll\nINSERT INTO payroll (period, name, net_pay) VALUES \n` + payrolls.map(p=>`('${p.period}','${p.employeeName}',${p.netPay})`).join(',\n') + ';\n\n';
+    return sql;
+  };
+
+  const handleDownloadSQL = () => {
+    const blob = new Blob([generateSQL()], {type:'text/sql'});
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='hotel_system_db.sql'; a.click();
+  };
+
+  const dashboardData = useMemo(() => {
+    const totalIncome = accounts.reduce((a,c)=>a+c.in,0);
+    const totalExpense = accounts.reduce((a,c)=>a+c.out,0) + payrolls.reduce((a,c)=>a+c.netPay,0);
+    return { totalIncome, totalExpense, profit: totalIncome-totalExpense };
+  }, [accounts, payrolls]);
+
+  // --- UI Components ---
+
+  const ActionButton = ({ icon: Icon, label, color, sub, onClick }: any) => (
+    <button onClick={onClick} className={`${color} text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all flex flex-col items-start justify-between h-24 w-full active:scale-95`}>
+      <div className="bg-white/20 p-2 rounded-full mb-1"><Icon className="w-5 h-5" /></div>
+      <div className="text-left">
+          <span className="font-bold text-sm block">{label}</span>
+          <span className="text-[10px] opacity-80 block">{sub}</span>
+      </div>
+    </button>
+  );
+
+  const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between h-full">
+      <div className="flex justify-between items-start mb-2">
+         <div className={`p-2 rounded-lg ${color} text-white`}><Icon className="w-5 h-5" /></div>
+         {trend && <span className="text-xs font-bold text-green-500 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-slate-800">{value}</h3>
+        <p className="text-xs font-medium text-slate-400">{title}</p>
+      </div>
+    </div>
+  );
+
+  const DataRow = ({ title, subtitle, value, status, colorClass = "bg-white", icon: Icon }: any) => (
+    <div className={`${colorClass} p-3 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center mb-2`}>
+      <div className="flex items-center gap-3">
+        {Icon && <div className="p-2 bg-white rounded-full text-slate-500"><Icon className="w-4 h-4"/></div>}
+        <div>
+          <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{title}</h4>
+          <p className="text-[10px] text-slate-500">{subtitle}</p>
+        </div>
+      </div>
+      <div className="text-right whitespace-nowrap ml-2">
+        <span className="block font-bold text-indigo-600 text-sm">{value}</span>
+        {status && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 mt-1 inline-block">{status}</span>}
+      </div>
+    </div>
+  );
+
+  const ImportBox = ({ label, type, count, icon: Icon, color="bg-indigo-100 text-indigo-600" }: any) => (
+    <div className="relative group bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-indigo-400 transition-colors cursor-pointer mb-3">
+       <input type="file" accept=".csv" multiple onChange={(e)=>handleFileUpload(e,type)} className="absolute inset-0 opacity-0 cursor-pointer z-10"/>
+       <div className="flex items-center gap-3">
+         <div className={`p-2 rounded-lg ${count > 0 ? 'bg-green-100 text-green-600' : color}`}>
+           <Icon className="w-5 h-5"/>
+         </div>
+         <div>
+           <p className="font-bold text-sm text-slate-700">{label}</p>
+           <p className="text-xs text-slate-400">{count > 0 ? `${count} รายการ` : 'รอการอัปโหลด'}</p>
+         </div>
+       </div>
+       <div className="bg-slate-50 p-2 rounded-lg text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+         <Upload className="w-4 h-4" />
+       </div>
+    </div>
+  );
+
+  // --- Main Views ---
+
+  const renderDashboard = () => (
+    <div className="space-y-6 pb-24">
+      {/* 1. Header & Financial Health */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard title="รายรับ (Arteries)" value={`฿${dashboardData.totalIncome.toLocaleString()}`} icon={DollarSign} color="bg-emerald-500" trend="+12%" />
+        <StatCard title="รายจ่าย (Veins)" value={`฿${dashboardData.totalExpense.toLocaleString()}`} icon={TrendingUp} color="bg-rose-500" />
+        <StatCard title="กำไรสุทธิ" value={`฿${dashboardData.profit.toLocaleString()}`} icon={Landmark} color="bg-indigo-500" />
+        <StatCard title="ผู้เข้าพัก (Immune)" value={bookings.length} icon={Users} color="bg-amber-500" />
+      </div>
+
+      {/* 2. Quick Action Center (Heart Pumping) */}
+      <div>
+        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-red-500"/> ศูนย์ปฏิบัติการ (Quick Actions)</h3>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <ActionButton label="จองห้องพัก" sub="Front Office" icon={BedDouble} color="bg-blue-600" onClick={() => setShowQuickAction('booking')} />
+          <ActionButton label="ลงบัญชี" sub="Accounting" icon={BookOpen} color="bg-emerald-600" onClick={() => setShowQuickAction('account')} />
+          <ActionButton label="จดมิเตอร์" sub="Utilities" icon={Zap} color="bg-orange-500" onClick={() => alert('ฟีเจอร์นี้จะเชื่อมต่อกับระบบ QR Code ในอนาคต')} />
+          <ActionButton label="ออกใบ ตม." sub="Compliance" icon={ShieldCheck} color="bg-slate-600" onClick={() => alert('สร้างรายงาน TM.30 อัตโนมัติจากข้อมูล Booking')} />
+        </div>
+
+        {/* Quick Action Forms (Slide Down) */}
+        {showQuickAction === 'booking' && (
+          <div className="mt-4 bg-white p-5 rounded-xl border-l-4 border-blue-500 shadow-lg animate-in slide-in-from-top-2">
+            <h4 className="font-bold text-blue-800 mb-4 flex justify-between items-center">
+              <span><BedDouble className="inline w-4 h-4 mr-2"/>Check-in ลูกค้าใหม่</span>
+              <button onClick={()=>setShowQuickAction(null)}><X className="w-5 h-5 text-slate-400"/></button>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+               <input type="text" placeholder="ชื่อ-สกุล ลูกค้า" className="p-3 border rounded-lg w-full" value={newBooking.name} onChange={e=>setNewBooking({...newBooking, name: e.target.value})} />
+               <input type="text" placeholder="เลขห้อง (เช่น A101)" className="p-3 border rounded-lg w-full" value={newBooking.room} onChange={e=>setNewBooking({...newBooking, room: e.target.value})} />
+               <input type="number" placeholder="ราคา (บาท)" className="p-3 border rounded-lg w-full" value={newBooking.price} onChange={e=>setNewBooking({...newBooking, price: e.target.value})} />
+               <input type="date" className="p-3 border rounded-lg w-full" value={newBooking.date} onChange={e=>setNewBooking({...newBooking, date: e.target.value})} />
+            </div>
+            <button onClick={handleAddBooking} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700">ยืนยันการเข้าพัก</button>
+          </div>
+        )}
+
+        {showQuickAction === 'account' && (
+          <div className="mt-4 bg-white p-5 rounded-xl border-l-4 border-emerald-500 shadow-lg animate-in slide-in-from-top-2">
+             <h4 className="font-bold text-emerald-800 mb-4 flex justify-between items-center">
+              <span><BookOpen className="inline w-4 h-4 mr-2"/>บันทึก รับ-จ่าย</span>
+              <button onClick={()=>setShowQuickAction(null)}><X className="w-5 h-5 text-slate-400"/></button>
+            </h4>
+            <div className="space-y-4">
+              <input type="text" placeholder="รายการ (เช่น ค่าห้อง, ซื้อของ)" className="w-full p-3 border rounded-lg" value={newAccount.item} onChange={e=>setNewAccount({...newAccount, item: e.target.value})} />
+              <input type="number" placeholder="จำนวนเงิน" className="w-full p-3 border rounded-lg" value={newAccount.amount} onChange={e=>setNewAccount({...newAccount, amount: e.target.value})} />
+              <div className="flex gap-3">
+                <button onClick={()=>setNewAccount({...newAccount, type: 'in'})} className={`flex-1 p-3 rounded-lg font-bold border ${newAccount.type==='in' ? 'bg-emerald-100 border-emerald-500 text-emerald-700' : 'bg-slate-50 border-slate-200'}`}>รายรับ (+)</button>
+                <button onClick={()=>setNewAccount({...newAccount, type: 'out'})} className={`flex-1 p-3 rounded-lg font-bold border ${newAccount.type==='out' ? 'bg-red-100 border-red-500 text-red-700' : 'bg-slate-50 border-slate-200'}`}>รายจ่าย (-)</button>
+              </div>
+              <button onClick={handleAddAccount} className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-emerald-700">บันทึกรายการ</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Live Feed */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div>
+           <h3 className="text-sm font-bold text-slate-700 mb-3">การเคลื่อนไหวล่าสุด (Recent Flows)</h3>
+           <div className="space-y-2">
+              {bookings.slice(0, 3).map((b, i) => (
+                <DataRow key={b.id} title={b.customerName} subtitle={`ห้อง ${b.roomId} | ${b.checkIn}`} value={`+฿${b.totalPrice.toLocaleString()}`} status="Booking" colorClass="bg-blue-50/50" icon={BedDouble}/>
+              ))}
+              {accounts.slice(0, 3).map((a, i) => (
+                <DataRow key={a.id} title={a.item} subtitle={a.date} value={a.in > 0 ? `+฿${a.in.toLocaleString()}` : `-฿${a.out.toLocaleString()}`} status={a.in>0?'Income':'Expense'} colorClass={a.in > 0 ? 'bg-emerald-50/50' : 'bg-red-50/50'} icon={BookOpen}/>
+              ))}
+              {bookings.length === 0 && accounts.length === 0 && <div className="text-center text-slate-400 py-10 bg-slate-50 rounded-xl border border-dashed">ยังไม่มีข้อมูลในระบบเลือด</div>}
+           </div>
+        </div>
+        
+        {/* Graph: Cash Flow */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+           <h3 className="text-sm font-bold text-slate-700 mb-4">ชีพจรการเงิน (Financial Pulse)</h3>
+           <div className="h-[200px]">
+             <ResponsiveContainer width="100%" height="100%">
+               <AreaChart data={accounts.length > 0 ? accounts : [{date:'-', in:0, out:0}]}>
+                 <defs>
+                   <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
+                 <XAxis dataKey="date" hide/>
+                 <Tooltip />
+                 <Area type="monotone" dataKey="in" stroke="#10b981" fillOpacity={1} fill="url(#colorIn)" />
+               </AreaChart>
+             </ResponsiveContainer>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDataManagement = () => (
+    <div className="flex flex-col h-full pb-24">
+       <div className="mb-6">
+         <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2"><Droplet className="w-6 h-6 text-red-500"/> เติมเลือดเข้าระบบ (Data Import)</h2>
+         <p className="text-sm text-slate-500">อัปโหลดไฟล์ CSV จาก Google Sheet หรือ Excel เพื่ออัปเดตข้อมูลในแต่ละส่วน</p>
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-auto pb-4">
+         {/* 1. Arteries */}
+         <ImportBox label="1. ระบบหน้าบ้าน (Front Office)" type="bookings" count={bookings.length} icon={BedDouble} color="bg-blue-100 text-blue-600"/>
+         <ImportBox label="ข้อมูลห้องพัก (Rooms)" type="rooms" count={rooms.length} icon={FileText} color="bg-blue-50 text-blue-500"/>
+         
+         {/* 2. Veins */}
+         <ImportBox label="2. ระบบบัญชี (Accounting)" type="accounts" count={accounts.length} icon={BookOpen} color="bg-emerald-100 text-emerald-600"/>
+         
+         {/* 3. Nourishment (Highlights) */}
+         <ImportBox label="3. เงินเดือน (Payroll - หลายไฟล์)" type="payrolls" count={payrolls.length} icon={Briefcase} color="bg-purple-100 text-purple-600"/>
+         
+         {/* 4. Temperature */}
+         <ImportBox label="4. สาธารณูปโภค (Utilities)" type="meters" count={meters.length} icon={Zap} color="bg-orange-100 text-orange-600"/>
+
+         {/* 5. Immune */}
+         <ImportBox label="5. รายงานราชการ (TM.30)" type="reports" count={reports.length} icon={ShieldCheck} color="bg-slate-100 text-slate-600"/>
+       </div>
+
+       <div className="mt-auto pt-6 border-t border-slate-200">
+         <button onClick={handleDownloadSQL} className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-slate-900 transition-all flex justify-center items-center gap-2">
+           <Database className="w-6 h-6" /> Export Master Database (SQL)
+         </button>
+         <p className="text-center text-xs text-slate-400 mt-2">ไฟล์ SQL สามารถนำไปใช้กับ MySQL หรือฐานข้อมูลโรงแรมมาตรฐานได้ทันที</p>
+       </div>
+    </div>
+  );
+
+  const renderPayroll = () => (
+      <div className="pb-24">
+          <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">ข้อมูลเงินเดือน (Nourishment)</h2>
+              <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-bold">รวม: ฿{payrolls.reduce((a,b)=>a+b.netPay,0).toLocaleString()}</span>
+          </div>
+          <div className="space-y-3">
+              {payrolls.map((p,i) => (
+                  <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                      <div className="flex justify-between mb-2">
+                          <span className="font-bold text-slate-700">{p.employeeName}</span>
+                          <span className="font-bold text-purple-600">฿{p.netPay.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500">
+                          <span>{p.position} | งวด: {p.period}</span>
+                          <span>{p.accountNo}</span>
+                      </div>
+                  </div>
+              ))}
+              {payrolls.length === 0 && <div className="text-center text-slate-400 py-10">กรุณาไปที่เมนู "จัดการข้อมูล" เพื่ออัปโหลดไฟล์เงินเดือน</div>}
+          </div>
+      </div>
+  );
+
+  // --- Wrapper ---
+  return (
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden">
+      
+      {/* Sidebar Overlay */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transform transition-transform duration-300 lg:static lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 flex items-center justify-between border-b border-slate-100">
+           <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">V</div>
+             <div>
+                 <span className="font-bold text-xl text-slate-800 block">Vipat Hotel</span>
+                 <span className="text-xs text-slate-400">Ultimate Blood System</span>
+             </div>
+           </div>
+           <button onClick={()=>setIsSidebarOpen(false)} className="lg:hidden p-1 rounded-md text-slate-400 hover:bg-slate-100"><X className="w-6 h-6"/></button>
+        </div>
+        <nav className="p-4 space-y-1">
+          {[
+            { id: 'dashboard', label: 'หน้าหลัก (Dashboard)', icon: LayoutDashboard },
+            { id: 'bookings', label: '1. หน้าบ้าน (Front Office)', icon: BedDouble },
+            { id: 'accounts', label: '2. บัญชี (Accounting)', icon: BookOpen },
+            { id: 'payroll', label: '3. บุคคล (HR & Payroll)', icon: Briefcase },
+            { id: 'meters', label: '4. มิเตอร์ (Utilities)', icon: Zap },
+            { id: 'reports', label: '5. ราชการ (Compliance)', icon: ShieldCheck },
+            { id: 'data', label: 'จัดการข้อมูล (Data Hub)', icon: Database, special: true },
+          ].map(item => (
+            <button 
+              key={item.id} 
+              onClick={() => { setActiveTab(item.id); if(window.innerWidth<1024) setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm mb-1
+                ${activeTab === item.id 
+                    ? 'bg-indigo-50 text-indigo-700 shadow-sm border-l-4 border-indigo-600' 
+                    : item.special ? 'bg-slate-800 text-white hover:bg-slate-700 mt-6 shadow-lg' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}
+              `}
+            >
+              <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-indigo-600' : item.special ? 'text-white' : 'text-slate-400'}`}/>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm" onClick={()=>setIsSidebarOpen(false)} />}
+
+      <div className="flex-1 flex flex-col h-full w-full">
+        <header className="bg-white h-16 border-b border-slate-200 px-4 flex items-center justify-between shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button onClick={()=>setIsSidebarOpen(true)} className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+              <Menu className="w-6 h-6"/>
+            </button>
+            <h1 className="font-bold text-lg text-slate-800 capitalize truncate">
+              {activeTab === 'dashboard' ? 'ศูนย์ควบคุม (Command Center)' : 
+               activeTab === 'data' ? 'คลังเลือด (Data Hub)' : activeTab}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+              <span className="hidden md:inline text-xs text-slate-400">System Status: Normal</span>
+              <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-6 bg-slate-50">
+          <div className="max-w-4xl mx-auto h-full">
+            {activeTab === 'dashboard' && renderDashboard()}
+            
+            {activeTab === 'bookings' && (
+              <div className="space-y-4 pb-20">
+                {bookings.map((b,i) => <DataRow key={i} title={b.customerName} subtitle={`ห้อง: ${b.roomId}`} value={`฿${b.totalPrice.toLocaleString()}`} status={b.status} icon={BedDouble} />)}
+                {bookings.length===0 && <div className="text-center text-slate-400 py-10">ไม่มีข้อมูลการจอง</div>}
+              </div>
+            )}
+            
+            {activeTab === 'accounts' && (
+              <div className="space-y-4 pb-20">
+                {accounts.map((a,i) => <DataRow key={i} title={a.item} subtitle={a.date} value={a.in>0 ? `+${a.in.toLocaleString()}` : `-${a.out.toLocaleString()}`} colorClass={a.in>0?'bg-emerald-50/50':'bg-red-50/50'} icon={BookOpen}/>)}
+                {accounts.length===0 && <div className="text-center text-slate-400 py-10">ไม่มีข้อมูลบัญชี</div>}
+              </div>
+            )}
+            
+            {activeTab === 'payroll' && renderPayroll()}
+            
+            {activeTab === 'meters' && (
+               <div className="space-y-4 pb-20">
+                {meters.map((m,i) => <DataRow key={i} title={`ห้อง ${m.room}`} subtitle={`รอบ: ${m.month}`} value={`฿${m.totalCost.toLocaleString()}`} status={`${m.totalUnit} หน่วย`} icon={Zap}/>)}
+                {meters.length===0 && <div className="text-center text-slate-400 py-10">ไม่มีข้อมูลมิเตอร์</div>}
+               </div>
+            )}
+
+            {activeTab === 'reports' && (
+               <div className="space-y-4 pb-20">
+                {reports.map((r,i) => <DataRow key={i} title={r.customerName} subtitle={`สัญชาติ: ${r.nationality}`} value={r.room} status={r.checkIn} icon={ShieldCheck}/>)}
+                {reports.length===0 && <div className="text-center text-slate-400 py-10">ไม่มีรายงาน ตม. (จะสร้างอัตโนมัติเมื่อมี Booking)</div>}
+               </div>
+            )}
+
+            {activeTab === 'data' && renderDataManagement()}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
